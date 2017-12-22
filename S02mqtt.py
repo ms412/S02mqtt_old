@@ -14,8 +14,8 @@
 
 
 __app__ = "S02mqtt Adapter"
-__VERSION__ = "0.81"
-__DATE__ = "29.03.2017"
+__VERSION__ = "0.85"
+__DATE__ = "23.12.2017"
 __author__ = "Markus Schiesser"
 __contact__ = "M.Schiesser@gmail.com"
 __copyright__ = "Copyright (C) 2017 Markus Schiesser"
@@ -28,7 +28,7 @@ import json
 
 from configobj import ConfigObj
 from library.mqttpush import mqttpush
-from library.logger import logger
+from library.logger import MyLogger
 from library.S0Manager import S0manager
 
 class manager(object):
@@ -58,9 +58,10 @@ class manager(object):
         return True
 
     def start_logger(self):
-        self._log = loghandler('S02MQTT')
+        self._log = MyLogger('S02MQTT')
         print(self._cfg_log)
-        self._log.handle(self._cfg_log.get('LOGMODE'),self._cfg_log)
+        #self._log.handle(self._cfg_log.get('LOGMODE'),self._cfg_log)
+        self._log.handle()
         self._log.level(self._cfg_log.get('LOGLEVEL','DEBUG'))
         return True
 
@@ -113,14 +114,14 @@ class manager(object):
         self._log.info('Startup, %s %s %s'% ( __app__, __VERSION__, __DATE__) )
         self.start_gpio()
 
-        while(True):
-            if not self._S0mgr.isAlive():
-                self._log.critical('%s died... restrart'%(__app__))
-                self._S0mgr.__del__()
-                self.start_gpio()
+       # while(True):
+        #    if not self._S0mgr.isAlive():
+         #       self._log.critical('%s died... restrart'%(__app__))
+          #      self._S0mgr.__del__()
+           #     self.start_gpio()
 
-            else:
-                time.sleep(10)
+           # else:
+            #    time.sleep(10)
 
 if __name__ == "__main__":
 
@@ -129,7 +130,8 @@ if __name__ == "__main__":
         configfile = sys.argv[1]
     else:
     #    configfile = 'C:/Users/tgdscm41/PycharmProjects/Raspberry/S02mqtt1.cfg'
-        configfile = 'C:/Users/tgdscm41/PycharmProjects/Raspberry/S02mqtt.cfg'
+        configfile = 'C:/Users/tgdscm41/PycharmProjects/S02mqtt/S02mqtt1.cfg'
+       # configfile = './S02mqtt1.cfg'
         #configfile =  '/home/pi/m2m/S02mqtt.cfg'
 
   #  print('Configfile',configfile)

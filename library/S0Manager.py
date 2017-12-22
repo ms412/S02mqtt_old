@@ -2,35 +2,42 @@
 #import time
 import sys
 
-from threading import Thread
+#from threading import Thread
+
+
+from library.logger import MyLogger
 #from threading import Event
 #from queue import Queue
 import time
+import threading
 
 
 '''
 import device interface drivers
 '''
 
-from library.hwIf_raspberry import raspberry
+#from library.hwIf_raspberry import raspberry
 from library.hwIf_dummy import dummy
 from library.tempfile import tempfile
 
-class S0manager(Thread):
+class S0manager(threading.Thread):
 
     def __init__(self,config,callback,logChannel):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
 
+        print('S0manager',config)
         self._cfg = config
         self._callback = callback
-        self._log = logChannel
-        self._tmpfilename = str(self._cfg.get('TEMPFILE','S02mqtt.temp'))
+        self._log = MyLogger()
+      #  self._tempdir = str(config.get('TEMPDIR','./'))
+        self._tmpfilename = str(config.get('TEMPFILE','S02mqtt.temp'))
         self._update = int(self._cfg.get('UPDATE',60))
 
         '''
         Hardware handel stores the handle to the hardware
         only once available per VDM instance
         '''
+        self._tempFile = None
         self._hwHandle = None
         self._devHandle = {}
 
@@ -40,10 +47,11 @@ class S0manager(Thread):
 
     def __del__(self):
         self._log.debug('S0manager kill my self')
+        print('kill myself')
 
 
     def setup(self):
-        self._tempFile = tempfile(self._tmpfilename, self._log)
+        self._tempFile = tempfile(self._tmpfilename)
         tmpdata = self._tempFile.openfile()
 
         if tmpdata == None:
@@ -55,13 +63,13 @@ class S0manager(Thread):
             #log_msg =
             self._log.info('Tempfile exit read old values')
 
-        if 'RASPBERRY' in self._cfg.get('HWIF','RASPBERRY'):
-            self._hwHandle = raspberry(self._log)
-        elif 'DUMMY'in self._cfg.get('HWIF','RASPBERRY'):
-            self._hwHandle = dummy(self._log)
-        else:
-            self._log.critical('HWInterface %s unknown'% self._cfg.get('HWIF',None))
-            sys.exit()
+ #       if 'RASPBERRY' in self._cfg.get('HWIF','RASPBERRY'):
+  #          self._hwHandle = raspberry(self._log)
+   #     elif 'DUMMY'in self._cfg.get('HWIF','RASPBERRY'):
+    #        self._hwHandle = dummy(self._log)
+     #   else:
+      #      self._log.critical('HWInterface %s unknown'% self._cfg.get('HWIF',None))
+       #     sys.exit()
 
         for _pin, _cfg in self._cfg.items():
             print(_pin, _cfg)
@@ -79,32 +87,43 @@ class S0manager(Thread):
                         _cfg['PULS_SUMME'] = _tmp.get('PULS_SUMME', 0)
            #        _cfg['TIME'] = _tmp.get('TIME',0)
 
+                if 'RASPBERRY' in _cfg.get('HWIF', 'RASPBERRY'):
+                    self._hwHandle = raspberry(self._log)
+                elif 'DUMMY' in _cfg.get('HWIF', 'RASPBERRY'):
+                    self._hwHandle = dummy(self._log)
+                else:
+                    self._log.critical('HWInterface %s unknown' % _cfg.get('HWIF', None))
+                    sys.exit()
+
                 #self._devHandle[_pin] = S0(self._hwHandle, _pin, _cfg, self._log)
-                self._devHandle[_pin] = S0(self._hwHandle, _cfg, self._log)
-              #  print('devHandle',self._devHandle)
+                self._devHandle[_pin] = S0(self._hwHandle, _cfg)
+
         return True
 
     def run(self):
 
+        print('Start Thread')
         _timeout = time.time() + self._update
-
 
         while True:
 #            time.sleep(0.3)
 
+           # print('time',_timeout, time.time())
             if time.time() > _timeout:
-              #  print('Send update')
+            #    print('Send update')
                 self._log.info('Timer expired get update')
-#                self.msgbus_publish(self._log, '%s %s: %s ' % ('DEBUG', self.whoami(), log_msg))
+#             #   self.msgbus_publish(self._log, '%s %s: %s ' % ('DEBUG', self.whoami(), log_msg))
 
                 for key,value in self._devHandle.items():
-          #         print('.',key,value)
+               #     print('Update',key,value)
                     self.msg[key]=value.getData()
-                    self._tempFile.writefile(self.msg)
+                #    self._tempFile.writefile(self.msg)
                     self._callback(self.msg)
 
-              #  print('power',self.msg)
-                self._log.debug('Send Update %s'% self.msg)
+
+                self._tempFile.writefile(self.msg)
+                print('power',self.msg)
+              #  self._log.debug('Send Update %s'% self.msg)
 
                 _timeout = time.time() + self._update
 
@@ -112,11 +131,13 @@ class S0manager(Thread):
 
 class S0(object):
 
-    def __init__(self,hwHandle,cfg,logChannel):
+    def __init__(self,hwHandle,cfg):
+      #  Thread.__init__(self)
 
         self._hwHandle = hwHandle
+       # self._callback = callback
         self._cfg = cfg
-        self._log = logChannel
+  #      self._log = log
 
         '''
         System parameter
@@ -134,26 +155,20 @@ class S0(object):
         '''
         Class variables
         '''
-       # self._powerData = []
-        #self._t_update = 0
         self._pulsCounter = self._cfg.get('PULS_SUMME',0)
         self._timeCounter = self._cfg.get('TIME_SUMME',0)
+        self._pulsDelta  = self._cfg.get('PULS_DELTA',0)
+        self._timeDelta = self._cfg.get('TIME_DELTA',0)
 
         self._T0 = 0
-        self._Tdelta = 0
-        self._Pdelta = 0
+        self._timeDelta = 0
+        self._pulsDelta = 0
 
         self.setup()
 
     def setup(self):
 
-      #  self._powerData.append(self._power)
-       # self._pulsSum =
         self._T0 = time.time()
-
-
-
-   #     self._accuracySec = 3600 * 1000 / self._factor / self._accuracyWatt
 
         if not self._pin == None:
             self._hwHandle.ConfigIO(self._pin,'IN',self._attenuator)
@@ -162,44 +177,33 @@ class S0(object):
         return True
 
     def callback(self,pin):
-     #   print('callback',pin)
-        self._log.debug('Callback from Pin: %s'% pin)
+        print('callback',pin)
 
         if self._pulsCounter > 0:
 
-        #    print('Test',self._t_update,self._powerData)
-
+            print('%s Test'% pin)
             _timeCurrent = time.time()
             _T1 = _timeCurrent - self._T0
-            self._Tdelta = self._Tdelta + _T1
+            self._timedDelta = self._timeDelta + _T1
             self._timeCounter = self._timeCounter + _T1
-            self._Pdelta = self._Pdelta + 1
+            self._pulseDelta = self._pulsDelta + 1
 
-            #self._powerData.append(self.power(self._t_update,_timeCurrent))
-           # self._Tdelta = _timeCurrent - self._T0
-         #   self._timeCounter = self._timeCounter + self._Tdelta
-           # print('Conter',self._timeCounter,self._Tdelta,self._pulsCounter)
-            self._log.debug('Pin: %s, Total Time Counter: %s, Time Delta: %s, Total Puls Counter: %s, Puls Delta: %s' % (pin,self._timeCounter, self._Tdelta,self._pulsCounter,self._Pdelta))
-
-            #self._t_update = _timeCurrent
             self._T0 = _timeCurrent
 
         else:
-        #    print('First Puls now Start')
-            self._log.debug('Start Counter Pin: %s'% pin)
+            print('%s First Puls now Start'% pin)
 
         self._pulsCounter = self._pulsCounter + 1
 
-      #  print('callback',self._powerData)
         return True
 
     def getData(self):
         data = {}
         data['PULS_SUMME'] = self._pulsCounter
-        data['PULS_DELTA'] = self._Pdelta
+        data['PULS_DELTA'] = self._pulsDelta
         data['TIME_SUMME'] = self._timeCounter
-        data['TIME_DELTA'] = self._Tdelta
+        data['TIME_DELTA'] = self._timeDelta
 
-        self._Tdelta = 0
-        self._Pdelta = 0
+        self._timeDelta = 0
+        self._pulsDelta = 0
         return data
