@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -98,7 +98,7 @@ class manager(object):
        # for deviceId, measurement in data.items():
         channel = main_channel + '/' + deviceId
           #  print('channel',channel,deviceId)
-        self._log.debug('Push to mqtt server %s: %s'%(channel,deviceId))
+        self._log.debug('Push to mqtt server %s: %s'%(channel,data))
         mqttc.publish(channel,data)
 
         return True

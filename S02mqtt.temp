@@ -1,14 +1,14 @@
 {
     "S0-17": {
-        "PULS_DELTA": 0,
-        "PULS_SUMME": 68,
-        "TIME_DELTA": 0,
-        "TIME_SUMME": 681.0103545188904
+        "PULS_DELTA": 1,
+        "PULS_SUMME": 1,
+        "TIME_DELTA": 10.005507230758667,
+        "TIME_SUMME": 170.1865074634552
     },
     "S0-18": {
-        "PULS_DELTA": 0,
-        "PULS_SUMME": 1267,
-        "TIME_DELTA": 0,
-        "TIME_SUMME": 6734.671293735504
+        "PULS_DELTA": 1,
+        "PULS_SUMME": 1,
+        "TIME_DELTA": 10.04150390625,
+        "TIME_SUMME": 170.1535041332245
     }
 }

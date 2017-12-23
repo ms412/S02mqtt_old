@@ -1,6 +1,7 @@
 import os
 #import library.libpaho as mqtt
 import paho.mqtt.client as mqtt
+from library.logger import MyLogger
 
 
 
@@ -27,9 +28,9 @@ class mqttpush(object):
         self._publish = str(self._config.get('PUBLISH','/PUBLISH'))
 
     def publish(self,channel,payload):
-        _channel = self._publish + '/' + channel
+      #  _channel = self._publish + '/' + channel
         self._mqttc.connect(self._host)
-        self._mqttc.publish(_channel,payload)
+        self._mqttc.publish(channel,payload)
        # print('cc',channel,msg)
         self._mqttc.loop(2)
         self._mqttc.disconnect()

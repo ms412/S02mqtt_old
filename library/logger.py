@@ -81,7 +81,7 @@ class MyLogger(object, metaclass=SingletonType):
 
 
     def log(self,level, *argv):
-        print('LOG',level,argv)
+        #print('LOG',level,argv)
         if 'DEBUG' in level:
             self._logger.debug(argv)
         elif 'ERROR' in level:
